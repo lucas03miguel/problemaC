@@ -1,2 +1,2 @@
-## EA - Problema B
+## EA - Problema C
 chines parte 2
