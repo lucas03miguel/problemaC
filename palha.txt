@@ -1,0 +1,145 @@
+Goal
+Given a maze, find where to place the flood gate and manhole covers to
+create a safe path that can go from the start of the maze to the exit without
+crossing any water. You must also return this path. It is guaranteed that
+there is always at least one way to create a safe path.
+You can consider that water only flows in directions up, left, down or right
+(never diagonally), and cannot cross walls. Moreover, you assume that ev-
+ery place in the maze reachable by water from an uncovered manhole is
+immediately filled with water once you enter the maze.
+
+Input
+The first line of the input gives the number of test cases. There are at most
+10 test cases per input.
+The first line of each test cases gives two space-separated integers 1 ≤ N ≤
+500 and 1 ≤ M ≤ 500 denoting the number of rows and columns used to
+represent the maze.
+The following N lines give the maze. Each line contains M characters. Each
+character is one of:
+• # A wall
+• . An empty space
+• E The exit (this is always on the first line)
+• D The door where you will start (this is always on the last line)
+• M A manhole where water will come from once you open the door
+Lastly, there is one line with an integer C denoting the number of manhole
+covers you have available. It is guaranteed that C is less than the number
+of manholes in the maze (which means that you must always use the flood
+gate).
+
+Output
+For each test case you must print several lines.
+The first line must contain four space-separated integers r1 , c1 , r2 , c2 which
+will give the location of the flood gate. In particular, this means that the
+flood gate will stop water from crossing from (r1, c1) to (r2, c2) and vice-
+versa. The two spaces must be adjacent.
+The second line starts with an integer 0 ≤ X ≤ C denoting the number of
+manhole covers used.
+The following X lines two space-separated integers denoting the coordinates
+ri , ci of the i-th manhole cover. A manhole cover must be placed on a
+manhole.
+The next line starts with an integer P ≥ 2 denoting the number of steps to
+get from the door to the exit.
+The following P lines give the path. In particular, each line contains two
+integers denoting the coordinates rj , cj of this path in the order they are
+visited. The first coordinates should be the coordinates of the door, and the
+last should be the coordinates of the exit. The safe path cannot go over
+walls or cross the flood gate. There can be no repeated coordinates in
+this path, that is, you cannot go over the same place twice in the safe path.
+Consider that the top-left corner of the map has coordinates (0, 0).
+
+Example
+Input
+1
+6 7
+###E###
+#M#.#M#
+#...#.#
+#.#...#
+#...#M#
+##D####
+2
+
+Output
+3 4 3 5
+1
+1 1
+7
+5 2
+4 2
+4 3
+3 3
+2 3
+1 3
+0 3
+
+To solve this problem, model the maze as a graph and use a (BFS) algorithm to find the safe path from the starting point (the door) to the exit, while considering the water flow and the placement of manhole covers and the flood gate.
+Also use dominante points
+def DOM_2(P):
+    # Initialize Q with the first element of P. Q is a priority queue
+    Q = [P[0]]
+    m = P[0][0]  # Assuming P[i] is a tuple or list with x as the first element
+
+    # Iterate over the rest of the points in P
+    for i in range(1, len(P)):
+        if P[i][0] > m:
+            Q.append(P[i])
+            m = P[i][0]
+
+    return Q
+
+# Example usage
+P = [(2, 6), (1, 5), (4, 4), (3, 4), (6, 4), (6, 3), (5, 3), (7, 2)]
+dominant_points = DOM_2(P)
+print(dominant_points)
+
+Represent the maze as a graph:
+
+Create a node for each cell in the maze.
+Connect each node to its adjacent nodes (up, down, left, right) if there is no wall between them.
+Mark the nodes representing manholes, the door, and the exit.
+
+
+Simulate water flow:
+
+Perform a BFS starting from all manhole nodes, marking the nodes that can be reached by water.
+During the BFS, consider only the nodes that are not blocked by walls or the flood gate.
+
+
+Place manhole covers and the flood gate:
+
+Try all possible placements of the available manhole covers and the flood gate.
+For each placement, perform step 2 to simulate water flow and mark the nodes that can be reached by water.
+Check if there exists a path from the door node to the exit node that does not cross any water-filled node.
+
+
+Find the safe path:
+
+If a safe path exists for a particular placement of manhole covers and the flood gate, perform a BFS from the door node to the exit node, considering only the nodes that are not water-filled.
+Store the safe path and the corresponding placement of manhole covers and the flood gate.
+
+
+Output the solution:
+
+Print the coordinates of the flood gate placement.
+Print the coordinates of the manhole cover placements.
+Print the safe path from the door to the exit, representing it as a sequence of coordinates.
+Implement this in python and create a main function to read the inputs/print the outputs as shown in the input/output example. Also use this and don't create any test cases within the code because i will insert them myself:
+from sys import stdin, stdout
+
+def readln():
+    return stdin.readline().rstrip()
+
+def outln(n):
+    stdout.write(str(n) + '\n')
+
+def aztec():
+    raise NotImplementedError("JUST DO IT!")
+
+
+def main():
+    raise NotImplementedError("JUST DO IT!")
+
+if __name__ == '__main__':
+    main()
+
+ONCE AGAIN DON'T CREATE ANY TEST CASES WITHIN THE CODE BECAUSE I WILL INSERT THEM MYSELF:
