@@ -7,7 +7,9 @@ def outln(n):
     stdout.write(str(n) + '\n')
 
 def aztec():
-    pass
+
+
+    return "pila"
 
 
 def main():
@@ -17,14 +19,18 @@ def main():
     for i in range(n_cases):
         rows, columns = map(int, readln().split())
         maze = [[0 for _ in range(columns)] for _ in range(rows)]
-        print(maze)
         
         for j in range(rows):
             linha = readln()
             maze[j] = list(linha)
         
-        print(maze)
         C = int(readln())
+        #for row in maze:
+        #    outln(row)
+
+
+        outln(maze)
+        aztec()
 
 
 if __name__ == '__main__':
