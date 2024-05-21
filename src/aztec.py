@@ -11,10 +11,21 @@ def aztec():
 
 
 def main():
-    n_cases = int(input())
+    global maze
+    n_cases = int(readln())
 
     for i in range(n_cases):
-        N, M = map(int, input().split())
+        rows, columns = map(int, readln().split())
+        maze = [[0 for _ in range(columns)] for _ in range(rows)]
+        print(maze)
+        
+        for j in range(rows):
+            linha = readln()
+            maze[j] = list(linha)
+        
+        print(maze)
+        C = int(readln())
+
 
 if __name__ == '__main__':
     main()
