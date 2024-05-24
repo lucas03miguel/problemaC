@@ -196,7 +196,6 @@ def main():
                 solution = [dominating_set, cover_combination, path]
                 break
 
-        #print(solution)
         flood_gate, covers, path = solution
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
         outln(f"{len(covers)}")
