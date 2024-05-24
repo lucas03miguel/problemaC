@@ -166,27 +166,27 @@ def find_bridges(grid):
 
 
 def flood_simulation(grid, start_points, block=None):
-    for i in grid:
-        i = "".join(i)
-        print(i)
-    print()
+    #for i in grid:
+    #    i = "".join(i)
+    #    print(i)
+    #print()
 
 
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     rows, columns = len(grid), len(grid[0])
-    print("rows", rows)
-    print("columns", columns)
+    #print("rows", rows)
+    #print("columns", columns)
     visited = [[False] * columns for _ in range(rows)]
 
 
-    print("start_points", start_points)
+    #print("start_points", start_points)
     queue = start_points[:]
-    print("queue", queue)
+    #print("queue", queue)
     
-    for i in visited:
-        i = "\t".join(str(j) for j in i)
-        print(i)
-    print()
+    #for i in visited:
+    #    i = "\t".join(str(j) for j in i)
+    #    print(i)
+    #print()
 
     for x, y in queue:
         visited[x][y] = True
@@ -247,7 +247,7 @@ def main():
         manholes = []
         door = None
         exit = None
-        
+
         rows, columns = map(int, readln().split())
         maze = [[0 for _ in range(columns)] for _ in range(rows)]
         
@@ -275,8 +275,6 @@ def main():
 
         dominating_set = find_dominating_set_for_flood_control(maze, manholes, bridges)
         print("Optimal bridges for flood gates:", dominating_set)
-
-        print(i)
 
 
 
