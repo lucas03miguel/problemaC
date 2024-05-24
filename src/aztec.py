@@ -264,19 +264,17 @@ def main():
         
         C = int(readln())
 
-
-        outln(maze)
         outln(f"onde esta o buraco {manholes}")
         outln(f"onde esta a porta {door}")
         outln(f"onde esta a saida {exit}")
 
         bridges = find_bridges(maze)
-        print(bridges)
+        outln(bridges)
 
         dominating_set = find_dominating_set_for_flood_control(maze, manholes, bridges)
         print("Optimal bridges for flood gates:", dominating_set)
 
-
+        outln("\n")
 
         #flood_gate, covers, path = place_objects_and_find_path(maze, rows, columns, manholes, C, door, exit)
 
