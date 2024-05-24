@@ -12,6 +12,7 @@ def outln(n):
 # Direcoes possiveis para se mover no labirinto: cima, baixo, esquerda, direita
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
+
 def bfs_path(maze, start, goal, water_filled):
     n, m = len(maze), len(maze[0])
     queue = deque([start])
@@ -38,10 +39,17 @@ def reconstruct_path(came_from, current):
     total_path.reverse()
     return total_path
 
+# Initialize the cache for flood simulations
+flood_simulation_cache = {}
+
 def flood_simulation(grid, start_points, block=None):
+    cache_key = (tuple(start_points), block)
+    if cache_key in flood_simulation_cache:
+        return flood_simulation_cache[cache_key]
+    
     rows, columns = len(grid), len(grid[0])
     visited = [[False] * columns for _ in range(rows)]
-    queue = start_points[:]
+    queue = list(start_points)
     
     for x, y in queue:
         visited[x][y] = True
@@ -53,38 +61,72 @@ def flood_simulation(grid, start_points, block=None):
 
         for dx, dy in DIRECTIONS:
             nx, ny = x + dx, y + dy
-            if grid[nx][ny] == '#' or visited[nx][ny]:
-                continue
-
-            if 0 <= nx < rows and 0 <= ny < columns and grid[nx][ny] == '.' and not visited[nx][ny]:
+            if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M') and not visited[nx][ny]:
                 if block and (((x, y) == block[0] and (nx, ny) == block[1]) or ((x, y) == block[1] and (nx, ny) == block[0])):
                     continue
-
                 visited[nx][ny] = True
                 queue.append((nx, ny))
 
-    return visited
+    # Store the result in the cache before returning
+    flood_simulation_cache[cache_key] = tuple(map(tuple, visited))
+    return flood_simulation_cache[cache_key]
 
 
 
-def dfs_bridges(x, y, grid, visited, disc, low, parent, bridges, time):
-    visited[x][y] = True
-    disc[x][y] = low[x][y] = time[0]
-    time[0] += 1
-    
-    for dx, dy in DIRECTIONS:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < len(grid) and 0 <= ny < len(grid[0]) and grid[nx][ny] == '.':
-            if not visited[nx][ny]:
-                parent[nx][ny] = (x, y)
-                dfs_bridges(nx, ny, grid, visited, disc, low, parent, bridges, time)
-                
-                low[x][y] = min(low[x][y], low[nx][ny])
-                
-                if low[nx][ny] > disc[x][y]:
-                    bridges.append(((x, y), (nx, ny)))
-            elif (nx, ny) != parent[x][y]:
-                low[x][y] = min(low[x][y], disc[nx][ny])
+def dfs_bridges_iterative(grid):
+    rows, columns = len(grid), len(grid[0])
+    visited = [[False] * columns for _ in range(rows)]
+    disc = [[float('inf')] * columns for _ in range(rows)]
+    low = [[float('inf')] * columns for _ in range(rows)]
+    parent = [[None] * columns for _ in range(rows)]
+    bridges = []
+    stack = []
+    time = [0]
+
+    # Initialize stack with all unvisited starting points
+    for i in range(rows):
+        for j in range(columns):
+            if (grid[i][j] == 'M' or grid[i][j] == '.') and not visited[i][j]:
+                #print(grid[i][j], i, j)
+                stack.append((i, j, None))  # Include parent as None for the root
+
+                while stack:
+                    x, y, state = stack.pop()
+
+                    if state is None:
+                        # First time visiting the node
+                        visited[x][y] = True
+                        disc[x][y] = low[x][y] = time[0]
+                        time[0] += 1
+
+                        # Push back with a new state to handle after children
+                        stack.append((x, y, 'post'))
+
+                        # Push all unvisited neighbors
+                        for dx, dy in DIRECTIONS:
+                            nx, ny = x + dx, y + dy
+                            if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M'):
+                                if not visited[nx][ny]:
+                                    stack.append((nx, ny, None))
+                                    parent[nx][ny] = (x, y)
+                                elif (nx, ny) != parent[x][y]:
+                                    low[x][y] = min(low[x][y], disc[nx][ny])
+
+                    else:
+                        # Handle post-visit update
+                        for dx, dy in DIRECTIONS:
+                            nx, ny = x + dx, y + dy
+                            if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M'):
+                                if parent[nx][ny] == (x, y):
+                                    low[x][y] = min(low[x][y], low[nx][ny])
+
+                                    if low[nx][ny] > disc[x][y]:
+                                        bridges.append(((x, y), (nx, ny)))
+                                elif (nx, ny) != parent[x][y]:
+                                    low[x][y] = min(low[x][y], disc[nx][ny])
+
+    return bridges
+
 
 
 def find_bridges(grid):
@@ -96,10 +138,7 @@ def find_bridges(grid):
     bridges = []
     time = [0]
     
-    for i in range(rows):
-        for j in range(columns):
-            if (grid[i][j] == 'M' or grid[i][j] == '.') and not visited[i][j]:
-                dfs_bridges(i, j, grid, visited, disc, low, parent, bridges, time)
+    bridges = dfs_bridges_iterative(grid)
     
     return bridges
 
@@ -124,7 +163,7 @@ def main():
     num_cases = int(readln())
     results = []
 
-    for _ in range(num_cases):
+    for i in range(num_cases):
         n, m = map(int, readln().split())
         maze = [list(readln()) for _ in range(n)]
         num_covers = int(readln())
@@ -141,8 +180,10 @@ def main():
                     exit = (r, c)
                 elif maze[r][c] == 'M':
                     manholes.append((r, c))
+        #print(i)
         
         bridges = find_bridges(maze)
+        #print(bridges)  
         
         solution = []
         for cover_combination in itertools.combinations(manholes, num_covers):
@@ -152,16 +193,16 @@ def main():
                 
             path = bfs_path(maze, door, exit, water_filled)
             if path:
-                solution.append([dominating_set, cover_combination, path])
-            else:
-                solution.append([dominating_set, cover_combination, []])
+                solution = [dominating_set, cover_combination, path]
+                break
 
-        flood_gate, covers, path = random.choice(solution)
+        #print(solution)
+        flood_gate, covers, path = solution
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
-        outln(str(len(covers)))
+        outln(f"{len(covers)}")
         for cover in covers:
             outln(f"{cover[0]} {cover[1]}")
-        outln(str(len(path)))
+        outln(f"{len(path)}")
         for step in path:
             outln(f"{step[0]} {step[1]}")
 
