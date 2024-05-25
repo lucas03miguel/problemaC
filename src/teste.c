@@ -8,10 +8,6 @@ typedef struct {
     int x, y;
 } Point;
 
-typedef struct {
-    int u, v;
-} Edge;
-
 int N, M;
 char maze[MAX][MAX];
 int flood_gate[4];
@@ -37,6 +33,8 @@ void tarjan_iterative(int sx, int sy) {
     memset(dfn, 0, sizeof(dfn));
     memset(low, 0, sizeof(low));
     memset(parent, -1, sizeof(parent));
+    memset(visited, 0, sizeof(visited));
+    int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};  
     idx = 1;
     top = 0;
 
@@ -47,41 +45,33 @@ void tarjan_iterative(int sx, int sy) {
     while (top > 0) {
         int x = stack[top-1][0];
         int y = stack[top-1][1];
-
-        int found = 0;
-        int adj[4][2] = {{x+1, y}, {x-1, y}, {x, y+1}, {x, y-1}};
-
-        for (int i = 0; i < 4; i++) {
-            int nx = adj[i][0], ny = adj[i][1];
-            if (nx >= 0 && ny >= 0 && nx < N && ny < M && maze[nx][ny] != '#' && parent[x][y][0] != nx && parent[x][y][1] != ny) {
-                if (!dfn[nx][ny]) {
+        if (!visited[x][y]) {
+            visited[x][y] = 1;
+            for (int i = 0; i < 4; i++) {
+                int nx = x + directions[i][0], ny = y + directions[i][1];
+                if (nx >= 0 && ny >= 0 && nx < N && ny < M && (maze[nx][ny] == 'M' || maze[nx][ny] == '.') && !visited[nx][ny]) {
                     stack[top][0] = nx;
                     stack[top++][1] = ny;
-                    dfn[nx][ny] = low[nx][ny] = idx++;
                     parent[nx][ny][0] = x;
                     parent[nx][ny][1] = y;
-                    found = 1;
-                    break;
-                } else {
-                    low[x][y] = low[x][y] < dfn[nx][ny] ? low[x][y] : dfn[nx][ny];
+                    dfn[nx][ny] = low[nx][ny] = idx++;
+                } else if (nx >= 0 && ny >= 0 && nx < N && ny < M && (maze[nx][ny] == 'M' || maze[nx][ny] == '.') && (parent[x][y][0] != nx || parent[x][y][1] != ny)) {
+                    low[x][y] = (low[x][y] < dfn[nx][ny]) ? low[x][y] : dfn[nx][ny];
                 }
             }
-        }
-
-        if (!found) {
+        } else {
             top--;
-            for (int i = 0; i < 4; i++) {
-                int nx = adj[i][0], ny = adj[i][1];
-                if (nx >= 0 && ny >= 0 && nx < N && ny < M && maze[nx][ny] != '#' && parent[x][y][0] != nx && parent[x][y][1] != ny) {
-                    if (low[nx][ny] > dfn[x][y]) {
-                        add_bridge(x, y, nx, ny);
-                    }
-                    low[x][y] = low[x][y] < low[nx][ny] ? low[x][y] : low[nx][ny];
+            int px = parent[x][y][0], py = parent[x][y][1];
+            if (px != -1) {
+                low[px][py] = (low[px][py] < low[x][y]) ? low[px][py] : low[x][y];
+                if (low[x][y] > dfn[px][py] && (maze[px][py] == 'M' || maze[px][py] == '.')) {
+                    add_bridge(px, py, x, y);
                 }
             }
         }
     }
 }
+
 
 void bfs_safe_path(int sx, int sy, int ex, int ey) {
     int queue[MAX * MAX][2], front = 0, rear = 0;
@@ -128,21 +118,21 @@ void bfs_safe_path(int sx, int sy, int ex, int ey) {
 }
 
 int main() {
+    srand(0);
+
     int t;
     scanf("%d", &t);
 
-    while (t--) {
+    for (int z = 0; z < t; ++z) {
         scanf("%d %d", &N, &M);
 
         for (int i = 0; i < N; i++) {
             scanf("%s", maze[i]);
         }
-
         int C;
         scanf("%d", &C);
 
         int sx = 0, sy = 0, ex = 0, ey = 0;
-
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
                 if (maze[i][j] == 'D') {
@@ -158,21 +148,14 @@ int main() {
         bridge_count = 0;
         tarjan_iterative(sx, sy);
 
-        // Use the first bridge as the flood gate location
-        if (bridge_count > 0) {
-            flood_gate[0] = bridges[0][0];
-            flood_gate[1] = bridges[0][1];
-            flood_gate[2] = bridges[0][2];
-            flood_gate[3] = bridges[0][3];
-        } else {
-            // Default to (0,0)-(0,1) if no bridges found, adjust as necessary
-            flood_gate[0] = 0;
-            flood_gate[1] = 0;
-            flood_gate[2] = 0;
-            flood_gate[3] = 1;
-        }
-
-        // Place manhole covers (example: just cover the first C manholes)
+        int selected_index = rand() % bridge_count;
+        //printf("%d, %d\n", bridge_count, selected_index);
+        flood_gate[0] = bridges[selected_index][0];
+        flood_gate[1] = bridges[selected_index][1];
+        flood_gate[2] = bridges[selected_index][2];
+        flood_gate[3] = bridges[selected_index][3];
+        
+        
         num_covers = 0;
         for (int i = 0; i < N && num_covers < C; i++) {
             for (int j = 0; j < M && num_covers < C; j++) {
@@ -186,7 +169,6 @@ int main() {
 
         bfs_safe_path(sx, sy, ex, ey);
 
-        // Output
         printf("%d %d %d %d\n", flood_gate[0], flood_gate[1], flood_gate[2], flood_gate[3]);
         printf("%d\n", num_covers);
         for (int i = 0; i < num_covers; i++) {
