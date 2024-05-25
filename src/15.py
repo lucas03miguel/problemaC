@@ -179,7 +179,7 @@ def main():
         #print(i)
         
         bridges = find_bridges(maze)
-        #print(bridges)  
+        print(bridges)  
         
         for cover_combination in itertools.combinations(manholes, num_covers):
             manhole_aux = list(set(manholes) - set(cover_combination))

@@ -33,6 +33,8 @@ void tarjan_iterative(int sx, int sy) {
     memset(dfn, 0, sizeof(dfn));
     memset(low, 0, sizeof(low));
     memset(parent, -1, sizeof(parent));
+    memset(visited, 0, sizeof(visited)); // Incluir também a definição para visited
+    int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};  
     idx = 1;
     top = 0;
 
@@ -43,41 +45,33 @@ void tarjan_iterative(int sx, int sy) {
     while (top > 0) {
         int x = stack[top-1][0];
         int y = stack[top-1][1];
-
-        int found = 0;
-        int adj[4][2] = {{x+1, y}, {x-1, y}, {x, y+1}, {x, y-1}};
-
-        for (int i = 0; i < 4; i++) {
-            int nx = adj[i][0], ny = adj[i][1];
-            if (nx >= 0 && ny >= 0 && nx < N && ny < M && maze[nx][ny] != '#' && parent[x][y][0] != nx && parent[x][y][1] != ny) {
-                if (!dfn[nx][ny]) {
+        if (!visited[x][y]) {
+            visited[x][y] = 1;
+            for (int i = 0; i < 4; i++) {
+                int nx = x + directions[i][0], ny = y + directions[i][1];
+                if (nx >= 0 && ny >= 0 && nx < N && ny < M && (maze[nx][ny] == 'M' || maze[nx][ny] == '.') && !visited[nx][ny]) {
                     stack[top][0] = nx;
                     stack[top++][1] = ny;
-                    dfn[nx][ny] = low[nx][ny] = idx++;
                     parent[nx][ny][0] = x;
                     parent[nx][ny][1] = y;
-                    found = 1;
-                    break;
-                } else {
-                    low[x][y] = low[x][y] < dfn[nx][ny] ? low[x][y] : dfn[nx][ny];
+                    dfn[nx][ny] = low[nx][ny] = idx++;
+                } else if (nx >= 0 && ny >= 0 && nx < N && ny < M && (maze[nx][ny] == 'M' || maze[nx][ny] == '.') && (parent[x][y][0] != nx || parent[x][y][1] != ny)) {
+                    low[x][y] = (low[x][y] < dfn[nx][ny]) ? low[x][y] : dfn[nx][ny];
                 }
             }
-        }
-
-        if (!found) {
+        } else {
             top--;
-            for (int i = 0; i < 4; i++) {
-                int nx = adj[i][0], ny = adj[i][1];
-                if (nx >= 0 && ny >= 0 && nx < N && ny < M && maze[nx][ny] != '#' && parent[x][y][0] != nx && parent[x][y][1] != ny) {
-                    if (low[nx][ny] > dfn[x][y]) {
-                        add_bridge(x, y, nx, ny);
-                    }
-                    low[x][y] = low[x][y] < low[nx][ny] ? low[x][y] : low[nx][ny];
+            int px = parent[x][y][0], py = parent[x][y][1];
+            if (px != -1) {
+                low[px][py] = (low[px][py] < low[x][y]) ? low[px][py] : low[x][y];
+                if (low[x][y] > dfn[px][py] && (maze[px][py] == 'M' || maze[px][py] == '.')) {
+                    add_bridge(px, py, x, y);
                 }
             }
         }
     }
 }
+
 
 void bfs_safe_path(int sx, int sy, int ex, int ey) {
     int queue[MAX * MAX][2], front = 0, rear = 0;
@@ -123,6 +117,18 @@ void bfs_safe_path(int sx, int sy, int ex, int ey) {
     path_len++;
 }
 
+void print_output() {
+    printf("%d %d %d %d\n", flood_gate[0], flood_gate[1], flood_gate[2], flood_gate[3]);
+    printf("%d\n", num_covers);
+    for (int i = 0; i < num_covers; i++) {
+        printf("%d %d\n", covers[i][0], covers[i][1]);
+    }
+    printf("%d\n", path_len);
+    for (int i = path_len - 1; i >= 0; i--) {
+        printf("%d %d\n", path[i].x, path[i].y);
+    }
+}
+
 int main() {
     int t;
     scanf("%d", &t);
@@ -158,6 +164,7 @@ int main() {
         if (bridge_count > 0) {
             int min_x = N, min_y = M;
             for (int i = 0; i < bridge_count; i++) {
+                //printf("Bridge %d: %d %d %d %d\n", i, bridges[i][0], bridges[i][1], bridges[i][2], bridges[i][3]);
                 if ((bridges[i][0] < min_x) || (bridges[i][0] == min_x && bridges[i][1] < min_y)) {
                     min_x = bridges[i][0];
                     min_y = bridges[i][1];
@@ -189,16 +196,7 @@ int main() {
 
         bfs_safe_path(sx, sy, ex, ey);
 
-        // Output
-        printf("%d %d %d %d\n", flood_gate[0], flood_gate[1], flood_gate[2], flood_gate[3]);
-        printf("%d\n", num_covers);
-        for (int i = 0; i < num_covers; i++) {
-            printf("%d %d\n", covers[i][0], covers[i][1]);
-        }
-        printf("%d\n", path_len);
-        for (int i = path_len - 1; i >= 0; i--) {
-            printf("%d %d\n", path[i].x, path[i].y);
-        }
+        print_output();
     }
 
     return 0;
