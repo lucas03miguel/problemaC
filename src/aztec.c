@@ -33,7 +33,7 @@ void tarjan_iterative(int sx, int sy) {
     memset(dfn, 0, sizeof(dfn));
     memset(low, 0, sizeof(low));
     memset(parent, -1, sizeof(parent));
-    memset(visited, 0, sizeof(visited)); // Incluir também a definição para visited
+    memset(visited, 0, sizeof(visited));
     int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};  
     idx = 1;
     top = 0;
@@ -117,34 +117,20 @@ void bfs_safe_path(int sx, int sy, int ex, int ey) {
     path_len++;
 }
 
-void print_output() {
-    printf("%d %d %d %d\n", flood_gate[0], flood_gate[1], flood_gate[2], flood_gate[3]);
-    printf("%d\n", num_covers);
-    for (int i = 0; i < num_covers; i++) {
-        printf("%d %d\n", covers[i][0], covers[i][1]);
-    }
-    printf("%d\n", path_len);
-    for (int i = path_len - 1; i >= 0; i--) {
-        printf("%d %d\n", path[i].x, path[i].y);
-    }
-}
-
 int main() {
     int t;
     scanf("%d", &t);
 
-    while (t--) {
+    for (int z = 0; z < t; ++t) {
         scanf("%d %d", &N, &M);
 
         for (int i = 0; i < N; i++) {
             scanf("%s", maze[i]);
         }
-
         int C;
         scanf("%d", &C);
 
         int sx = 0, sy = 0, ex = 0, ey = 0;
-
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
                 if (maze[i][j] == 'D') {
@@ -160,29 +146,18 @@ int main() {
         bridge_count = 0;
         tarjan_iterative(sx, sy);
 
-        // Choose the correct bridge to place the flood gate
-        if (bridge_count > 0) {
-            int min_x = N, min_y = M;
-            for (int i = 0; i < bridge_count; i++) {
-                //printf("Bridge %d: %d %d %d %d\n", i, bridges[i][0], bridges[i][1], bridges[i][2], bridges[i][3]);
-                if ((bridges[i][0] < min_x) || (bridges[i][0] == min_x && bridges[i][1] < min_y)) {
-                    min_x = bridges[i][0];
-                    min_y = bridges[i][1];
-                    flood_gate[0] = bridges[i][0];
-                    flood_gate[1] = bridges[i][1];
-                    flood_gate[2] = bridges[i][2];
-                    flood_gate[3] = bridges[i][3];
-                }
+        int min_x = N, min_y = M;
+        for (int i = 0; i < bridge_count; i++) {
+            if ((bridges[i][0] < min_x) || (bridges[i][0] == min_x && bridges[i][1] < min_y)) {
+                min_x = bridges[i][0];
+                min_y = bridges[i][1];
+                flood_gate[0] = bridges[i][0];
+                flood_gate[1] = bridges[i][1];
+                flood_gate[2] = bridges[i][2];
+                flood_gate[3] = bridges[i][3];
             }
-        } else {
-            // Default to (0,0)-(0,1) if no bridges found, adjust as necessary
-            flood_gate[0] = 0;
-            flood_gate[1] = 0;
-            flood_gate[2] = 0;
-            flood_gate[3] = 1;
         }
-
-        // Place manhole covers (example: just cover the first C manholes)
+        
         num_covers = 0;
         for (int i = 0; i < N && num_covers < C; i++) {
             for (int j = 0; j < M && num_covers < C; j++) {
@@ -196,7 +171,15 @@ int main() {
 
         bfs_safe_path(sx, sy, ex, ey);
 
-        print_output();
+        printf("%d %d %d %d\n", flood_gate[0], flood_gate[1], flood_gate[2], flood_gate[3]);
+        printf("%d\n", num_covers);
+        for (int i = 0; i < num_covers; i++) {
+            printf("%d %d\n", covers[i][0], covers[i][1]);
+        }
+        printf("%d\n", path_len);
+        for (int i = path_len - 1; i >= 0; i--) {
+            printf("%d %d\n", path[i].x, path[i].y);
+        }
     }
 
     return 0;
