@@ -39,6 +39,7 @@ def reconstruct_path(came_from, current):
     total_path.reverse()
     return total_path
 
+# Initialize the cache for flood simulations
 flood_simulation_cache = {}
 
 def flood_simulation(grid, start_points, block=None):
@@ -48,13 +49,15 @@ def flood_simulation(grid, start_points, block=None):
     
     rows, columns = len(grid), len(grid[0])
     visited = [[False] * columns for _ in range(rows)]
-    queue = deque(start_points)
+    queue = list(start_points)
     
     for x, y in queue:
         visited[x][y] = True
 
-    while queue:
-        x, y = queue.popleft()
+    i = 0
+    while i < len(queue):
+        x, y = queue[i]
+        i += 1
 
         for dx, dy in DIRECTIONS:
             nx, ny = x + dx, y + dy
@@ -64,6 +67,7 @@ def flood_simulation(grid, start_points, block=None):
                 visited[nx][ny] = True
                 queue.append((nx, ny))
 
+    # Store the result in the cache before returning
     flood_simulation_cache[cache_key] = tuple(map(tuple, visited))
     return flood_simulation_cache[cache_key]
 
@@ -179,8 +183,9 @@ def main():
         #print(i)
         
         bridges = find_bridges(maze)
-        print(bridges)  
+        #print(bridges)  
         
+        solution = []
         for cover_combination in itertools.combinations(manholes, num_covers):
             manhole_aux = list(set(manholes) - set(cover_combination))
             dominating_set = find_dominating_set_for_flood_control(maze, manhole_aux, bridges)
@@ -191,6 +196,7 @@ def main():
                 solution = [dominating_set, cover_combination, path]
                 break
 
+        #print(solution)
         flood_gate, covers, path = solution
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
         outln(f"{len(covers)}")

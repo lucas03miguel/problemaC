@@ -79,48 +79,103 @@ def bfs_safe_path(maze, N, M, sx, sy, ex, ey):
                 queue.append((nx, ny))
     return []
 
+
 def evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gate):
     flood_effectiveness = {}
-    base_flooded = bfs_flood_control(maze, [(sx, sy)], None)
+    
+    base_flooded = bfs_flood_control(maze, manholes, flood_gate)
     
     for i in base_flooded:
         i = "\t".join(map(str, i))
         print(i)
     print()
-
+    
     for manhole in manholes:
         print("manhole", manhole)
         
         if manhole == flood_gate[0] or manhole == flood_gate[1]:
             continue
+        print("passei")
+        flood_with_cover = bfs_flood_control(maze, manholes, flood_gate, [manhole])
         
-        flood_with_cover = bfs_flood_control(maze, [(sx, sy)], manhole)
-        flood_effectiveness[manhole] = sum(1 for x in range(N) for y in range(M) if base_flooded[x][y] and not flood_with_cover[x][y])
+        print("flood_with_cover")
+        for i in flood_with_cover:
+            i = "\t".join(map(str, i))
+            print(i)
+        print()
+        
+        
+        flood_effectiveness[manhole] = sum(
+            1 for x in range(N) for y in range(M) if base_flooded[x][y] and not flood_with_cover[x][y]
+        )
     
     return flood_effectiveness
 
-def bfs_flood_control(grid, start_points, block=None):
+def bfs_flood_control(grid, start_points, flood_gate, block=None):
     rows, columns = len(grid), len(grid[0])
     queue = deque(start_points)
+    
+    if block:
+        for i in block:
+            if i in queue:
+                queue.remove(i)
+    
     visited = [[False] * columns for _ in range(rows)]
     
-    for x, y in start_points:
-        visited[x][y] = True
+    print("queue", queue)
+    print("flood_gate", flood_gate)
+    # Marcar a flood gate como visitada
+    #visited[flood_gate[0][0]][flood_gate[0][1]] = True
+    #visited[flood_gate[1][0]][flood_gate[1][1]] = True
     
+    
+#    print("sadfsdf", start_points)
+#    for x, y in start_points:
+#        visited[x][y] = True
+    print("block", block)
+    if block:
+        for i in block:
+            print(i)
+            grid[i[0]][i[1]] = '.'
+        #x, y = block
+        #grid[x][y] = '.'
+        #queue.po
+        #visited[block[0]][block[1]] = False
+        
+        #if (x, y) in start_points:
+        #    return visited
+        
+       
     while queue:
         x, y = queue.popleft()
+        print("x, y:", x, y)
+        
         for dx, dy in DIRECTIONS:
             nx, ny = x + dx, y + dy
             if 0 <= nx < rows and 0 <= ny < columns and not visited[nx][ny] and grid[nx][ny] != '#':
-                if block and (nx, ny) == block:
+                if block and ((nx, ny) == flood_gate[0]):
+                    print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
                     continue
+                
                 visited[nx][ny] = True
                 queue.append((nx, ny))
     return visited
 
+
+
 def select_effective_covers(manhole_effectiveness, C):
     sorted_by_effectiveness = sorted(manhole_effectiveness.items(), key=lambda item: item[1], reverse=True)
-    return [manhole for manhole, effectiveness in sorted_by_effectiveness[:C]]
+    resp = [manhole for manhole, effectiveness in sorted_by_effectiveness[:C]]
+    print(sorted_by_effectiveness[:C])
+    n_um = sum(1 for manhole, effectiveness in sorted_by_effectiveness[:C] if effectiveness == 1)
+    print("n_um", n_um)
+    
+    return resp
+    if n_um == C:
+        return [manhole for manhole, effectiveness in sorted_by_effectiveness[:C]]
+    else:
+        return [manhole for manhole, effectiveness in sorted_by_effectiveness[:C] if effectiveness > 1]
+
 
 def valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
     (bx1, by1), (bx2, by2) = bridge
@@ -133,6 +188,7 @@ def valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
     maze[bx2][by2] = '.'
     
     return path_exists
+
 
 def main():
     num_cases = int(readln())
@@ -153,6 +209,7 @@ def main():
                     manholes.append((x, y))
 
         bridges = dfs_bridges_iterative(maze)
+        print(bridges)
         
         valid_bridges = []
         for bridge in bridges:
@@ -160,14 +217,25 @@ def main():
                 valid_bridges.append(bridge)
 
         flood_gate = random.choice(valid_bridges)
+        print("flood_gate", flood_gate, "\n")
 
         path = bfs_safe_path(maze, N, M, sx, sy, ex, ey)
 
         manhole_effectiveness = evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gate)
+        print("manhole_effectiveness", manhole_effectiveness)
         selected_covers = select_effective_covers(manhole_effectiveness, C)
+        print(selected_covers)
+        
+        print(set(manholes) - set(selected_covers))
+        flood = bfs_flood_control(maze, set(manholes) - set(selected_covers), flood_gate, selected_covers)
+        for i in flood:
+            i = "\t".join(map(str, i))
+            print(i)
+        print()
+        
         
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
-        outln(len(selected_covers))
+        outln(len(selected_covers)) 
         for cover in selected_covers:
             outln(f"{cover[0]} {cover[1]}")
         outln(len(path))
