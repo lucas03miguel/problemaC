@@ -23,22 +23,22 @@ def dfs_bridges_iterative(grid):
     for i in range(rows):
         for j in range(columns):
             if (grid[i][j] == 'M' or grid[i][j] == '.') and not visited[i][j]:
-                stack.append((i, j, None))
+                stack.append((i, j, 0))
 
                 while stack:
                     x, y, state = stack.pop()
 
-                    if state is None:
+                    if not state:
                         visited[x][y] = True
                         disc[x][y] = low[x][y] = time[0]
                         time[0] += 1
-                        stack.append((x, y, 'post'))
+                        stack.append((x, y, 1))
 
                         for dx, dy in DIRECTIONS:
                             nx, ny = x + dx, y + dy
                             if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M'):
                                 if not visited[nx][ny]:
-                                    stack.append((nx, ny, None))
+                                    stack.append((nx, ny, 0))
                                     parent[nx][ny] = (x, y)
                                 elif (nx, ny) != parent[x][y]:
                                     low[x][y] = min(low[x][y], disc[nx][ny])
@@ -49,7 +49,11 @@ def dfs_bridges_iterative(grid):
                                 if parent[nx][ny] == (x, y):
                                     low[x][y] = min(low[x][y], low[nx][ny])
                                     if low[nx][ny] > disc[x][y]:
-                                        bridges.append(((x, y), (nx, ny)))
+                                        if (x, y) < (nx, ny):
+                                            bridges.append(((x, y), (nx, ny)))
+                                        else:
+                                            bridges.append(((nx, ny), (x, y)))
+                                        #bridges.append(((x, y), (nx, ny)))
                                 elif (nx, ny) != parent[x][y]:
                                     low[x][y] = min(low[x][y], disc[nx][ny])
 
@@ -112,6 +116,7 @@ def evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gat
     return flood_effectiveness
 
 def bfs_flood_control(grid, start_points, flood_gate, block=None):
+    print("start_points", start_points)
     rows, columns = len(grid), len(grid[0])
     queue = deque(start_points)
     
@@ -130,12 +135,13 @@ def bfs_flood_control(grid, start_points, flood_gate, block=None):
     
     
 #    print("sadfsdf", start_points)
-#    for x, y in start_points:
-#        visited[x][y] = True
+    #for x, y in start_points:
+    #    visited[x][y] = True
+
     print("block", block)
     if block:
         for i in block:
-            print(i)
+            #print(i)
             grid[i[0]][i[1]] = '.'
         #x, y = block
         #grid[x][y] = '.'
@@ -153,13 +159,33 @@ def bfs_flood_control(grid, start_points, flood_gate, block=None):
         for dx, dy in DIRECTIONS:
             nx, ny = x + dx, y + dy
             if 0 <= nx < rows and 0 <= ny < columns and not visited[nx][ny] and grid[nx][ny] != '#':
-                if block and ((nx, ny) == flood_gate[0]):
-                    print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
-                    continue
+                print("nx, ny", nx, ny, "dx dy", dx, dy)
+                print("sd", subtract_tuples(flood_gate[1], flood_gate[0]), "fff", flood_gate[0], flood_gate[1])
+                print("diferenca", (dx, dy) == subtract_tuples(flood_gate[1], flood_gate[0]))
+                if block:
+                    if (dx, dy) == (0, -1):
+                        if (nx, ny) == flood_gate[0] and (x, y) == flood_gate[1]:
+                            print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
+                            continue
+                    elif (dx, dy) == (0, 1):
+                        if (nx, ny) == flood_gate[1] and (x, y) == flood_gate[0]:
+                            print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
+                            continue
+                    elif (dx, dy) == (1, 0):
+                        if (nx, ny) == flood_gate[1] and (x, y) == flood_gate[0]:
+                            print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
+                            continue
+                    elif (dx, dy) == (-1, 0):
+                        if (nx, ny) == flood_gate[0] and (x, y) == flood_gate[1]:
+                            print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
+                            continue
                 
                 visited[nx][ny] = True
                 queue.append((nx, ny))
     return visited
+
+def subtract_tuples(a, b):
+    return (a[0] - b[0], a[1] - b[1])
 
 
 
@@ -232,6 +258,13 @@ def main():
             i = "\t".join(map(str, i))
             print(i)
         print()
+
+
+        for x in range(N):
+            for y in range(M):
+                if flood[x][y] and (x, y) in selected_covers:
+                    selected_covers.remove((x, y))
+        
         
         
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
