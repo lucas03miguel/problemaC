@@ -1,242 +1,119 @@
-from collections import deque
 import random
 from sys import stdin, stdout
-from itertools import combinations
-
-DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
+from collections import deque
 
 def readln():
-    return stdin.readline().rstrip()
+    return stdin.readline().strip()
 
-def outln(n):
-    stdout.write(str(n) + '\n')
+def outln(s):
+    stdout.write(str(s) + "\n")
+
+def parse_maze(N, M):
+    maze = [list(readln()) for _ in range(N)]
+    start = end = None
+    manholes = []
+    for x in range(N):
+        for y in range(M):
+            if maze[x][y] == 'D':
+                start = (x, y)
+            elif maze[x][y] == 'E':
+                end = (x, y)
+            elif maze[x][y] == 'M':
+                manholes.append((x, y))
+    return maze, start, end, manholes
+
+def setup_bridge_utilities(rows, cols):
+    inf = float('inf')
+    visited = [[False] * cols for _ in range(rows)]
+    disc = low = [[inf] * cols for _ in range(rows)]
+    parent = [[None] * cols for _ in range(rows)]
+    return visited, disc, low, parent
+
+def process_stack_for_bridges(stack, visited, disc, low, parent, time, bridges, grid, directions):
+    while stack:
+        x, y, state = stack.pop()
+        if state == 0:  # Visiting the node
+            visited[x][y] = True
+            disc[x][y] = low[x][y] = time[0]
+            time[0] += 1
+            stack.append((x, y, 1))
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < len(grid) and 0 <= ny < len(grid[0]) and grid[nx][ny] in 'M.':
+                    if not visited[nx][ny]:
+                        stack.append((nx, ny, 0))
+                        parent[nx][ny] = (x, y)
+                    elif (nx, ny) != parent[x][y]:
+                        low[x][y] = min(low[x][y], disc[nx][ny])
+        else:
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < len(grid) and 0 <= ny < len(grid[0]) and grid[nx][ny] in 'M.':
+                    if parent[nx][ny] == (x, y):
+                        low[x][y] = min(low[x][y], low[nx][ny])
+                        if low[nx][ny] > disc[x][y]:
+                            bridges.append(((x, y), (nx, ny)))
 
 def dfs_bridges_iterative(grid):
-    rows, columns = len(grid), len(grid[0])
-    visited = [[False] * columns for _ in range(rows)]
-    disc = [[float('inf')] * columns for _ in range(rows)]
-    low = [[float('inf')] * columns for _ in range(rows)]
-    parent = [[None] * columns for _ in range(rows)]
-    bridges = []
-    stack = []
-    time = [0]
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    rows, cols = len(grid), len(grid[0])
+    visited, disc, low, parent = setup_bridge_utilities(rows, cols)
+    bridges, stack, time = [], [], [0]
 
     for i in range(rows):
-        for j in range(columns):
-            if (grid[i][j] == 'M' or grid[i][j] == '.') and not visited[i][j]:
+        for j in range(cols):
+            if grid[i][j] in 'M.' and not visited[i][j]:
                 stack.append((i, j, 0))
-
-                while stack:
-                    x, y, state = stack.pop()
-
-                    if not state:
-                        visited[x][y] = True
-                        disc[x][y] = low[x][y] = time[0]
-                        time[0] += 1
-                        stack.append((x, y, 1))
-
-                        for dx, dy in DIRECTIONS:
-                            nx, ny = x + dx, y + dy
-                            if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M'):
-                                if not visited[nx][ny]:
-                                    stack.append((nx, ny, 0))
-                                    parent[nx][ny] = (x, y)
-                                elif (nx, ny) != parent[x][y]:
-                                    low[x][y] = min(low[x][y], disc[nx][ny])
-                    else:
-                        for dx, dy in DIRECTIONS:
-                            nx, ny = x + dx, y + dy
-                            if 0 <= nx < rows and 0 <= ny < columns and (grid[nx][ny] == '.' or grid[nx][ny] == 'M'):
-                                if parent[nx][ny] == (x, y):
-                                    low[x][y] = min(low[x][y], low[nx][ny])
-                                    if low[nx][ny] > disc[x][y]:
-                                        if (x, y) < (nx, ny):
-                                            bridges.append(((x, y), (nx, ny)))
-                                        else:
-                                            bridges.append(((nx, ny), (x, y)))
-                                        #bridges.append(((x, y), (nx, ny)))
-                                elif (nx, ny) != parent[x][y]:
-                                    low[x][y] = min(low[x][y], disc[nx][ny])
-
+                process_stack_for_bridges(stack, visited, disc, low, parent, time, bridges, grid, directions)
+    
     return bridges
 
-def bfs_safe_path(maze, N, M, sx, sy, ex, ey):
-    queue = deque([(sx, sy)])
-    visited = [[False] * M for _ in range(N)]
-    visited[sx][sy] = True
-    parent = [[None] * M for _ in range(N)]
+def is_valid(x, y, visited, grid):
+    return 0 <= x < len(grid) and 0 <= y < len(grid[0]) and not visited[x][y] and grid[x][y] != '#'
 
+def perform_flood_bfs(queue, visited, grid, flood_gate):
     while queue:
         x, y = queue.popleft()
-        if x == ex and y == ey:
-            path = []
-            while parent[x][y] is not None:
-                path.append((x, y))
-                x, y = parent[x][y]
-            path.append((sx, sy))
-            path.reverse()
-            return path
-        for dx, dy in DIRECTIONS:
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
-            if 0 <= nx < N and 0 <= ny < M and not visited[nx][ny] and maze[nx][ny] != '#':
-                visited[nx][ny] = True
-                parent[nx][ny] = (x, y)
-                queue.append((nx, ny))
-    return []
-
-def evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gate, C):
-    flood_effectiveness = {}
-
-    base_flooded = bfs_flood_control(maze, manholes, flood_gate)
-
-    for comb in combinations(manholes, C):
-        flood_with_cover = bfs_flood_control(maze, manholes, flood_gate, block=list(comb))
-        flood_effectiveness[comb] = sum(
-            1 for x in range(N) for y in range(M) if base_flooded[x][y] and not flood_with_cover[x][y]
-        )
-
-    return flood_effectiveness
-
-
-def bfs_flood_control(grid, start_points, flood_gate, block=None):
-    #print("start_points", start_points)
-    rows, columns = len(grid), len(grid[0])
-    queue = deque(start_points)
-    
-    if block:
-        for i in block:
-            if i in queue:
-                queue.remove(i)
-    
-    visited = [[False] * columns for _ in range(rows)]
-    
-    #print("queue", queue)
-    #print("flood_gate", flood_gate)
-    # Marcar a flood gate como visitada
-    #visited[flood_gate[0][0]][flood_gate[0][1]] = True
-    #visited[flood_gate[1][0]][flood_gate[1][1]] = True
-    
-    
-#    #print("sadfsdf", start_points)
-    #for x, y in start_points:
-    #    visited[x][y] = True
-
-    #print("block", block)
-    if block:
-        for i in block:
-            ##print(i)
-            grid[i[0]][i[1]] = '.'
-        #x, y = block
-        #grid[x][y] = '.'
-        #queue.po
-        #visited[block[0]][block[1]] = False
-        
-        #if (x, y) in start_points:
-        #    return visited
-        
-       
-    while queue:
-        x, y = queue.popleft()
-        #print("x, y:", x, y)
-        
-        for dx, dy in DIRECTIONS:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < rows and 0 <= ny < columns and not visited[nx][ny] and grid[nx][ny] != '#':
-                #print("nx, ny", nx, ny, "dx dy", dx, dy)
-                #print("sd", subtract_tuples(flood_gate[1], flood_gate[0]), "fff", flood_gate[0], flood_gate[1])
-                #print("diferenca", (dx, dy) == subtract_tuples(flood_gate[1], flood_gate[0]))
-                if block:
-                    if (dx, dy) == (0, -1):
-                        if (nx, ny) == flood_gate[0] and (x, y) == flood_gate[1]:
-                            #print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
-                            continue
-                    elif (dx, dy) == (0, 1):
-                        if (nx, ny) == flood_gate[1] and (x, y) == flood_gate[0]:
-                            #print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
-                            continue
-                    elif (dx, dy) == (1, 0):
-                        if (nx, ny) == flood_gate[1] and (x, y) == flood_gate[0]:
-                            #print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
-                            continue
-                    elif (dx, dy) == (-1, 0):
-                        if (nx, ny) == flood_gate[0] and (x, y) == flood_gate[1]:
-                            #print("continunen", nx, ny, (nx, ny) == flood_gate[0], (nx, ny) == flood_gate[1])
-                            continue
-                
+            if is_valid(nx, ny, visited, grid):
                 visited[nx][ny] = True
                 queue.append((nx, ny))
     return visited
 
 
 
-def subtract_tuples(a, b):
-    return (a[0] - b[0], a[1] - b[1])
+def adjust_blocked_points(grid, block, queue):
+    for point in block:
+        grid[point[0]][point[1]] = '#'
+        if point in queue:
+            queue.remove(point)
 
-
-
-def select_effective_covers(manhole_effectiveness):
-    best_combination = max(manhole_effectiveness, key=manhole_effectiveness.get)
-    return list(best_combination)
-
-def valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
-    (bx1, by1), (bx2, by2) = bridge
-    maze[bx1][by1] = '#'
-    maze[bx2][by2] = '#'
-    
-    path_exists = bfs_safe_path(maze, N, M, sx, sy, ex, ey) != []
-
-    maze[bx1][by1] = '.'
-    maze[bx2][by2] = '.'
-    
-    return path_exists
+def bfs_flood_control(grid, start_points, flood_gate, block=None):
+    rows, cols = len(grid), len(grid[0])
+    queue, visited = deque(start_points), [[False] * cols for _ in range(rows)]
+    if block:
+        adjust_blocked_points(grid, block, queue)
+    return perform_flood_bfs(queue, visited, grid, flood_gate)
 
 def main():
     num_cases = int(readln())
     for _ in range(num_cases):
         N, M = map(int, readln().split())
-        maze = [list(readln()) for _ in range(N)]
+        maze, start, end, manholes = parse_maze(N, M)
         C = int(readln())
 
-        sx, sy, ex, ey = 0, 0, 0, 0
-        manholes = []
-        for x in range(N):
-            for y in range(M):
-                if maze[x][y] == 'D':
-                    sx, sy = x, y
-                elif maze[x][y] == 'E':
-                    ex, ey = x, y
-                elif maze[x][y] == 'M':
-                    manholes.append((x, y))
-
         bridges = dfs_bridges_iterative(maze)
-        
-        valid_bridges = []
-        for bridge in bridges:
-            if valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
-                valid_bridges.append(bridge)
+        valid_bridges = [bridge for bridge in bridges if valid_flood_gate(maze, N, M, start[0], start[1], end[0], end[1], bridge)]
+
+        if not valid_bridges:
+            outln("No valid flood gate found.")
+            continue
 
         flood_gate = random.choice(valid_bridges)
-        
-        manhole_effectiveness = evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gate, C)
+        manhole_effectiveness = evaluate_manhole_cover_effectiveness(maze, N, M, manholes, start[0], start[1], flood_gate, C)
         selected_covers = select_effective_covers(manhole_effectiveness)
-        
+
         flood = bfs_flood_control(maze, set(manholes) - set(selected_covers), flood_gate, selected_covers)
-        
-        for x in range(N):
-            for y in range(M):
-                if flood[x][y] and (x, y) in selected_covers:
-                    selected_covers.remove((x, y))
-        
-        outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
-        outln(len(selected_covers)) 
-        for cover in selected_covers:
-            outln(f"{cover[0]} {cover[1]}")
-        path = bfs_safe_path(maze, N, M, sx, sy, ex, ey)
-        outln(len(path))
-        for step in path:
-            outln(f"{step[0]} {step[1]}")
 
-
-if __name__ == "__main__":
-    main()
+        print_results(flood_gate, selected_covers, flood, N, M, start[0], start[1], end[0], end[1])
