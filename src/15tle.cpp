@@ -62,7 +62,7 @@ vector<vector<bool>> flood_simulation(const vector<vector<char>>& grid, const ve
     }
 
     int i = 0;
-    while (i < queue.size()) {
+    while (i < (int)queue.size()) {
         auto [x, y] = queue[i++];
         for (const auto& direction : DIRECTIONS) {
             int nx = x + direction.first;
@@ -206,7 +206,7 @@ int main() {
                 vector<pair<int, int>> cover_combination;
                 vector<pair<int, int>> remaining_manholes;
 
-                for (int j = 0; j < manholes.size(); ++j) {
+                for (auto j = 0; j < (int)manholes.size(); ++j) {
                     if (mask & (1 << j)) {
                         cover_combination.push_back(manholes[j]);
                     } else {

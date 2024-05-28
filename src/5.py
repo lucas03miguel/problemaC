@@ -12,7 +12,7 @@ def readln():
 def outln(n):
     stdout.write(str(n) + '\n')
 
-def dfs_bridges_iterative(grid):
+def dfs_bridges_iterative(grid, sx, sy, ex, ey):
     rows, columns = len(grid), len(grid[0])
     visited = [[False] * columns for _ in range(rows)]
     disc = [[float('inf')] * columns for _ in range(rows)]
@@ -51,10 +51,12 @@ def dfs_bridges_iterative(grid):
                                 if parent[nx][ny] == (x, y):
                                     low[x][y] = min(low[x][y], low[nx][ny])
                                     if low[nx][ny] > disc[x][y]:
-                                        if (x, y) < (nx, ny):
+                                        if (x, y) < (nx, ny) and valid_flood_gate(grid, rows, columns, sx, sy, ex, ey, ((x, y), (nx, ny))):
                                             bridges.append(((x, y), (nx, ny)))
-                                        else:
+                                            break
+                                        elif (x, y) >= (nx, ny) and valid_flood_gate(grid, rows, columns, sx, sy, ex, ey, ((nx, ny), (x, y))):
                                             bridges.append(((nx, ny), (x, y)))
+                                            break
                                         #bridges.append(((x, y), (nx, ny)))
                                 elif (nx, ny) != parent[x][y]:
                                     low[x][y] = min(low[x][y], disc[nx][ny])
@@ -91,15 +93,23 @@ def evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gat
     base_flooded = bfs_flood_control(maze, manholes, flood_gate)
 
     for comb in combinations(manholes, C):
-        flood_with_cover = bfs_flood_control(maze, manholes, flood_gate, block=list(comb))
-        flood_effectiveness[comb] = sum(
-            1 for x in range(N) for y in range(M) if base_flooded[x][y] and not flood_with_cover[x][y]
-        )
+        flood = bfs_flood_control(maze, set(manholes) - set(comb), flood_gate, comb)
+
+        filtered_comb = tuple(m for m in comb if not flood[m[0]][m[1]])        
+        if len(filtered_comb) != len(comb):
+            comb = filtered_comb
+        
+        flood_effectiveness[comb] = sum(1 for x in range(N) for y in range(M) if base_flooded[x][y] and not flood[x][y])
 
     return flood_effectiveness
 
 
-def bfs_flood_control(grid, start_points, flood_gate, block=None):
+memo = {}
+def bfs_flood_control(grid, start_points, flood_gate, block=()):
+    key = (tuple(start_points), flood_gate, tuple(block))
+    if key in memo:
+        return memo[key]
+    
     #print("start_points", start_points)
     rows, columns = len(grid), len(grid[0])
     queue = deque(start_points)
@@ -123,10 +133,10 @@ def bfs_flood_control(grid, start_points, flood_gate, block=None):
     #    visited[x][y] = True
 
     #print("block", block)
-    if block:
-        for i in block:
+    #if block:
+    #    for i in block:
             ##print(i)
-            grid[i[0]][i[1]] = '.'
+    #        grid[i[0]][i[1]] = '.'
         #x, y = block
         #grid[x][y] = '.'
         #queue.po
@@ -166,18 +176,15 @@ def bfs_flood_control(grid, start_points, flood_gate, block=None):
                 
                 visited[nx][ny] = True
                 queue.append((nx, ny))
+
+    memo[key] = visited
     return visited
-
-
-
-def subtract_tuples(a, b):
-    return (a[0] - b[0], a[1] - b[1])
-
 
 
 def select_effective_covers(manhole_effectiveness):
     best_combination = max(manhole_effectiveness, key=manhole_effectiveness.get)
     return list(best_combination)
+
 
 def valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
     (bx1, by1), (bx2, by2) = bridge
@@ -191,6 +198,7 @@ def valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
     
     return path_exists
 
+
 def main():
     num_cases = int(readln())
     for _ in range(num_cases):
@@ -198,41 +206,32 @@ def main():
         maze = [list(readln()) for _ in range(N)]
         C = int(readln())
 
-        sx, sy, ex, ey = 0, 0, 0, 0
-        manholes = []
-        for x in range(N):
-            for y in range(M):
-                if maze[x][y] == 'D':
-                    sx, sy = x, y
-                elif maze[x][y] == 'E':
-                    ex, ey = x, y
-                elif maze[x][y] == 'M':
-                    manholes.append((x, y))
+        ex, ey = [(x, y) for x in range(N) for y in range(M) if maze[x][y] == 'E'][0]
+        dx, dy = [(x, y) for x in range(N) for y in range(M) if maze[x][y] == 'D'][0]
+        manholes = [(x, y) for x in range(N) for y in range(M) if maze[x][y] == 'M']
 
-        bridges = dfs_bridges_iterative(maze)
+        bridges = dfs_bridges_iterative(maze, dx, dy, ex, ey)
+        flood_gate = random.choice(bridges)
         
-        valid_bridges = []
-        for bridge in bridges:
-            if valid_flood_gate(maze, N, M, sx, sy, ex, ey, bridge):
-                valid_bridges.append(bridge)
-
-        flood_gate = random.choice(valid_bridges)
-        
-        manhole_effectiveness = evaluate_manhole_cover_effectiveness(maze, N, M, manholes, sx, sy, flood_gate, C)
+        manhole_effectiveness = evaluate_manhole_cover_effectiveness(maze, N, M, manholes, dx, dy, flood_gate, C)
+        #print(manhole_effectiveness)
         selected_covers = select_effective_covers(manhole_effectiveness)
+        #print(selected_covers)
         
-        flood = bfs_flood_control(maze, set(manholes) - set(selected_covers), flood_gate, selected_covers)
+
+        #print(flood)
         
-        for x in range(N):
-            for y in range(M):
-                if flood[x][y] and (x, y) in selected_covers:
-                    selected_covers.remove((x, y))
+        #for x in range(N):
+        #    for y in range(M):
+        #        if flood[x][y] and (x, y) in selected_covers:
+        #            selected_covers.remove((x, y))
+                    
         
         outln(f"{flood_gate[0][0]} {flood_gate[0][1]} {flood_gate[1][0]} {flood_gate[1][1]}")
         outln(len(selected_covers)) 
         for cover in selected_covers:
             outln(f"{cover[0]} {cover[1]}")
-        path = bfs_safe_path(maze, N, M, sx, sy, ex, ey)
+        path = bfs_safe_path(maze, N, M, dx, dy, ex, ey)
         outln(len(path))
         for step in path:
             outln(f"{step[0]} {step[1]}")

@@ -183,6 +183,7 @@ def main():
         #print(i)
         
         bridges = find_bridges(maze)
+        print(bridges)
         #print(bridges)  
         
         solution = []
