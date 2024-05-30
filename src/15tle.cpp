@@ -10,11 +10,13 @@
 #include <functional>
 #include <stack>
 
+#include <chrono>
+
 using namespace std;
 
 const vector<pair<int, int>> DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-vector<pair<int, int>> bfs_path(const vector<vector<char>>& maze, pair<int, int> start, pair<int, int> goal, const vector<vector<bool>>& water_filled) {
+stack<pair<int, int>> bfs_path(const vector<vector<char>>& maze, pair<int, int> start, pair<int, int> goal, const vector<vector<bool>>& water_filled) {
     int n = maze.size();
     int m = maze[0].size();
     deque<pair<int, int>> queue = {start};
@@ -25,13 +27,14 @@ vector<pair<int, int>> bfs_path(const vector<vector<char>>& maze, pair<int, int>
         queue.pop_front();
 
         if (current == goal) {
-            vector<pair<int, int>> path;
+            //vector<pair<int, int>> path;
+            stack<pair<int, int>> stk; 
             while (current != make_pair(-1, -1)) {
-                path.push_back(current);
+                stk.push(current);
                 current = came_from[current];
             }
-            reverse(path.begin(), path.end());
-            return path;
+            //reverse(path.begin(), path.end());
+            return stk;
         }
 
         for (const auto& direction : DIRECTIONS) {
@@ -89,11 +92,11 @@ vector<pair<pair<int, int>, pair<int, int>>> find_bridges(const vector<vector<ch
     vector<pair<pair<int, int>, pair<int, int>>> bridges;
     int time = 0;
 
-    // Iterative DFS using stack
+    
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < columns; ++j) {
             if ((grid[i][j] == 'M' || grid[i][j] == '.') && !visited[i][j]) {
-                stack<tuple<int, int, bool>> stk; // (x, y, is_post_visit)
+                stack<tuple<int, int, bool>> stk; 
                 stk.push({i, j, false});
 
                 while (!stk.empty()) {
@@ -142,6 +145,50 @@ vector<pair<pair<int, int>, pair<int, int>>> find_bridges(const vector<vector<ch
     return bridges;
 }
 
+vector<pair<int, int>> select_manhole_covers(const vector<vector<char>>& grid, int num_covers) {
+    int rows = grid.size();
+    int columns = grid[0].size();
+    vector<pair<int, int>> manholes;
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < columns; ++c) {
+            if (grid[r][c] == 'M') {
+                manholes.push_back({r, c});
+            }
+        }
+    }
+
+    vector<pair<int, int>> covers;
+    vector<vector<bool>> water_filled(rows, vector<bool>(columns, false));
+
+    while ((int)covers.size() < num_covers && !manholes.empty()) {
+        int max_flooded = 0;
+        pair<int, int> best_manhole = {-1, -1};
+
+        for (const auto& manhole : manholes) {
+            vector<vector<bool>> current_water_filled = water_filled;
+            current_water_filled[manhole.first][manhole.second] = true;
+            int flooded_count = count_if(current_water_filled.begin(), current_water_filled.end(), [](const vector<bool>& row) {
+                return count(row.begin(), row.end(), true);
+            });
+
+            if (flooded_count > max_flooded) {
+                max_flooded = flooded_count;
+                best_manhole = manhole;
+            }
+        }
+
+        if (max_flooded > 0) {
+            covers.push_back(best_manhole);
+            water_filled[best_manhole.first][best_manhole.second] = true;
+            manholes.erase(remove(manholes.begin(), manholes.end(), best_manhole), manholes.end());
+        } else {
+            break;
+        }
+    }
+
+    return covers;
+}
+
 pair<pair<int, int>, pair<int, int>> find_dominating_set_for_flood_control(const vector<vector<char>>& grid, const vector<pair<int, int>>& manholes, const vector<pair<pair<int, int>, pair<int, int>>>& bridges) {
     vector<vector<bool>> initial_flooded_areas = flood_simulation(grid, manholes);
     pair<pair<int, int>, pair<int, int>> best_bridge = {{-1, -1}, {-1, -1}};
@@ -165,8 +212,6 @@ pair<pair<int, int>, pair<int, int>> find_dominating_set_for_flood_control(const
 }
 
 int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(0);
 
     int num_cases;
     cin >> num_cases;
@@ -186,6 +231,8 @@ int main() {
 
         pair<int, int> door, exit;
         vector<pair<int, int>> manholes;
+        
+        auto start_time = chrono::high_resolution_clock::now();
         for (int r = 0; r < n; ++r) {
             for (int c = 0; c < m; ++c) {
                 if (maze[r][c] == 'D') {
@@ -197,31 +244,28 @@ int main() {
                 }
             }
         }
+        auto end_time = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+        cout << "Tempo de execução: " << duration.count() << " ms" << endl;
+        
 
         vector<pair<pair<int, int>, pair<int, int>>> bridges = find_bridges(maze);
-        vector<tuple<pair<pair<int, int>, pair<int, int>>, vector<pair<int, int>>, vector<pair<int, int>>>> solutions;
+        vector<tuple<pair<pair<int, int>, pair<int, int>>, vector<pair<int, int>>, stack<pair<int, int>>>> solutions;
 
-        for (int mask = 0; mask < (1 << manholes.size()); ++mask) {
-            if (__builtin_popcount(mask) == num_covers) {
-                vector<pair<int, int>> cover_combination;
-                vector<pair<int, int>> remaining_manholes;
-
-                for (auto j = 0; j < (int)manholes.size(); ++j) {
-                    if (mask & (1 << j)) {
-                        cover_combination.push_back(manholes[j]);
-                    } else {
-                        remaining_manholes.push_back(manholes[j]);
-                    }
-                }
-
-                pair<pair<int, int>, pair<int, int>> dominating_set = find_dominating_set_for_flood_control(maze, remaining_manholes, bridges);
-                vector<vector<bool>> water_filled = flood_simulation(maze, remaining_manholes, dominating_set);
-                vector<pair<int, int>> path = bfs_path(maze, door, exit, water_filled);
-
-                if (!path.empty()) {
-                    solutions.emplace_back(dominating_set, cover_combination, path);
-                }
+        vector<pair<int, int>> cover_combination = select_manhole_covers(maze, num_covers);
+        vector<pair<int, int>> remaining_manholes;
+        for (const auto& manhole : manholes) {
+            if (find(cover_combination.begin(), cover_combination.end(), manhole) == cover_combination.end()) {
+                remaining_manholes.push_back(manhole);
             }
+        }
+
+        pair<pair<int, int>, pair<int, int>> dominating_set = find_dominating_set_for_flood_control(maze, remaining_manholes, bridges);
+        vector<vector<bool>> water_filled = flood_simulation(maze, remaining_manholes, dominating_set);
+        stack<pair<int, int>> path = bfs_path(maze, door, exit, water_filled);
+
+        if (!path.empty()) {
+            solutions.emplace_back(dominating_set, cover_combination, path);
         }
 
         if (!solutions.empty()) {
@@ -235,11 +279,18 @@ int main() {
                 cout << cover.first << " " << cover.second << "\n";
             }
             cout << path.size() << "\n";
-            for (const auto& step : path) {
-                cout << step.first << " " << step.second << "\n";
+            while (path.size() > 0) {
+                auto current = path.top();
+                cout << current.first << " " << current.second << "\n";
+                path.pop();
             }
+            //auto current = path.top();
+            //cout << current.first << " " << current.second << "\n";
+            
         }
+        
     }
+
 
     return 0;
 }

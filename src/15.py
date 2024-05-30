@@ -28,7 +28,9 @@ def dfs_bridges_iterative(grid, sx, sy, ex, ey):
             if grid[i][j] != '#' and not visited[i][j]:
                 stack.append((i, j, None))
 
+                #print(stack)
                 while stack:
+                    #print("len", len(stack))
                     x, y, state = stack.pop()
 
                     if state is None:
@@ -179,6 +181,7 @@ def main():
         manhole_indices = list(range(len(manholes)))
 
         bridges = dfs_bridges_iterative(maze, dx, dy, ex, ey)
+        #print(bridges)
         
         solution = None
         for cover_combination in combinations(manhole_indices, C):
